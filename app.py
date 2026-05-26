@@ -101,6 +101,7 @@ st.set_page_config(page_title="股票趋势仪表盘", layout="wide", page_icon=
 st.markdown("""
 <style>
 div[data-testid="stMetricValue"] { font-size: 32px; font-weight: 700; }
+.big-num { font-size: 34px; font-weight: 700; line-height: 1.1; }
 .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .badge-green   { background-color: #1f7a3a; color: white; }
 .badge-red     { background-color: #c62828; color: white; }
@@ -110,6 +111,16 @@ div[data-testid="stMetricValue"] { font-size: 32px; font-weight: 700; }
 .dot-white { color: white; }
 .arrow-up   { color: #1f7a3a; font-weight: 700; margin-right: 4px; font-size: 14px; }
 .arrow-down { color: #c62828; font-weight: 700; margin-right: 4px; font-size: 14px; }
+
+/* 手机适配：屏幕窄于 640px 时缩小数字和徽章 */
+@media (max-width: 640px) {
+    .big-num { font-size: 22px; }
+    .badge { font-size: 10px; padding: 3px 8px; }
+    div[data-testid="stMetricValue"] { font-size: 22px; }
+    h1 { font-size: 22px !important; }
+    h2 { font-size: 18px !important; }
+    h3 { font-size: 16px !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -807,16 +818,16 @@ with tab_dash:
     m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
         st.caption("当前股价")
-        st.markdown(f"<div style='font-size:34px;font-weight:700'>${latest_price:,.2f}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='big-num'>${latest_price:,.2f}</div>", unsafe_allow_html=True)
     with m2:
         st.caption("200 日均线")
-        st.markdown(f"<div style='font-size:34px;font-weight:700'>${latest_ma200:,.2f}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='big-num'>${latest_ma200:,.2f}</div>", unsafe_allow_html=True)
         arrow = "▲" if distance >= 0 else "▼"
         cls = "arrow-up" if distance >= 0 else "arrow-down"
         st.markdown(f"<span class='{cls}'>{arrow} {distance:+.1f}%</span>", unsafe_allow_html=True)
     with m3:
         st.caption("Z值（偏离度）")
-        st.markdown(f"<div style='font-size:34px;font-weight:700'>{latest_zscore:.2f}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='big-num'>{latest_zscore:.2f}</div>", unsafe_allow_html=True)
         st.markdown(
             f"<span class='{z_arrow_cls}'>{z_arrow_ch}</span>"
             f"<span class='badge {zsignal_cls}'><span class='{zsignal_dot}'>●</span> {zsignal}</span>",
@@ -824,7 +835,7 @@ with tab_dash:
         )
     with m4:
         st.caption("斜率（趋势强度）")
-        st.markdown(f"<div style='font-size:34px;font-weight:700'>{latest_slope:.1f}%</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='big-num'>{latest_slope:.1f}%</div>", unsafe_allow_html=True)
         st.markdown(
             f"<span class='{s_arrow_cls}'>{s_arrow_ch}</span>"
             f"<span class='badge {regime_cls}'><span class='{regime_dot}'>●</span> {regime}</span>",
@@ -832,7 +843,7 @@ with tab_dash:
         )
     with m5:
         st.caption("当前所在区间")
-        st.markdown(f"<div style='font-size:34px;font-weight:700'>{current_bucket}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='big-num'>{current_bucket}</div>", unsafe_allow_html=True)
 
     st.write("")
 
