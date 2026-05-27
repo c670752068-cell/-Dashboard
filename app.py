@@ -515,6 +515,25 @@ DEFAULT_RATIO_PAIRS = [
     ("SMH",  "QQQ", "SMH/NDX"),
 ]
 
+# 代码 → 中文名（结论卡片用）
+TICKER_CN = {
+    "SPY": "标普500", "QQQ": "纳指100", "IWM": "罗素小盘", "DIA": "道琼斯",
+    "SLV": "白银", "GLD": "黄金", "GDX": "金矿股", "USO": "原油",
+    "NVDA": "英伟达", "TSLA": "特斯拉",
+    "XOP": "油气勘探", "SMH": "半导体", "XLE": "能源板块", "XLF": "金融板块",
+    "XLK": "科技板块", "XLV": "医疗板块", "XLI": "工业板块",
+    "AAPL": "苹果", "MSFT": "微软", "GOOGL": "谷歌", "AMZN": "亚马逊",
+    "META": "Meta", "NFLX": "奈飞", "AVGO": "博通", "TSM": "台积电",
+    "AMD": "AMD", "INTC": "英特尔", "ASML": "阿斯麦", "QCOM": "高通",
+    "JPM": "摩根大通", "V": "Visa", "MA": "万事达", "BAC": "美银",
+    "BRK-B": "伯克希尔", "WMT": "沃尔玛", "COST": "好市多", "HD": "家得宝",
+    "XOM": "埃克森", "CVX": "雪佛龙", "JNJ": "强生", "LLY": "礼来",
+    "UNH": "联合健康", "DIS": "迪士尼", "KO": "可口可乐", "PEP": "百事",
+    "MCD": "麦当劳", "NKE": "耐克", "SBUX": "星巴克",
+}
+def _ticker_cn(t):
+    return TICKER_CN.get(t.upper(), t.upper())
+
 with tab_ratio:
     st.markdown("### 📈 相对强度比率仪表盘")
     st.caption(
@@ -608,6 +627,7 @@ with tab_ratio:
             )
 
             missing = []
+            verdicts = []  # 每对的中文结论
             for idx, (num, den, label) in enumerate(pairs):
                 r, c = divmod(idx, n_cols)
                 inner = gridspec.GridSpecFromSubplotSpec(
@@ -628,6 +648,36 @@ with tab_ratio:
                 ma60 = ratio.rolling(60).mean()
                 ma200 = ratio.rolling(200).mean()
                 macd, sig_line, hist = _compute_macd(ratio)
+
+                # ---- 计算结论 ----
+                try:
+                    r_now = float(ratio.iloc[-1])
+                    m60_now = float(ma60.dropna().iloc[-1])
+                    m200_now = float(ma200.dropna().iloc[-1])
+                    pct60 = (r_now / m60_now - 1) * 100
+                    pct200 = (r_now / m200_now - 1) * 100
+                    r_30 = float(ratio.iloc[-30]) if len(ratio) >= 30 else r_now
+                    pct30 = (r_now / r_30 - 1) * 100
+                    h_now = float(hist.dropna().iloc[-1])
+                    macd_tag = "🟢 多头" if h_now > 0 else "🔴 空头"
+                    if pct60 > 0 and pct200 > 0:
+                        status, verdict = "🟢", "持续强势"
+                    elif pct60 < 0 and pct200 < 0:
+                        status, verdict = "🔴", "持续弱势"
+                    elif pct60 > 0 and pct200 < 0:
+                        status, verdict = "🟡", "短期反弹中（长期仍弱）"
+                    else:
+                        status, verdict = "🟡", "短期回落中（长期仍强）"
+                    verdicts.append({
+                        "status": status, "verdict": verdict,
+                        "num": num, "den": den,
+                        "num_cn": _ticker_cn(num), "den_cn": _ticker_cn(den),
+                        "r_now": r_now, "pct60": pct60, "pct200": pct200,
+                        "pct30": pct30, "macd_tag": macd_tag,
+                        "sort_key": pct200,
+                    })
+                except Exception:
+                    pass
 
                 ax_r.plot(ratio.index, ratio, color=RATIO_C, lw=1.0)
                 ax_r.plot(ma60.index, ma60, color=MA60_C, lw=1.3)
@@ -666,6 +716,22 @@ with tab_ratio:
                      color=TEXT, fontsize=14, fontweight="bold", va="center")
             fig.text(0.98, 0.005, "Shepherd Capital Markets · 牧羊人资本市场",
                      color="#666", fontsize=8, ha="right", style="italic")
+
+            # ---- 中文结论卡片（图上方）----
+            if verdicts:
+                st.markdown("### 📋 当前结论 · 按相对强度排序（强 → 弱）")
+                verdicts.sort(key=lambda v: -v["sort_key"])
+                for v in verdicts:
+                    st.markdown(
+                        f"{v['status']} **{v['num']}/{v['den']}** "
+                        f"（{v['num_cn']} / {v['den_cn']}）：**{v['verdict']}**  \n"
+                        f"当前比值 `{v['r_now']:.4f}` · "
+                        f"vs 60日均线 `{v['pct60']:+.1f}%` · "
+                        f"vs 200日均线 `{v['pct200']:+.1f}%` · "
+                        f"近30天 `{v['pct30']:+.1f}%` · "
+                        f"MACD {v['macd_tag']}"
+                    )
+                st.markdown("---")
 
             st.pyplot(fig)
 
